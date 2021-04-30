@@ -4,6 +4,9 @@ import cv2
 import pytesseract # Módulo para a utilização da tecnologia OCR
 import re
 import math
+from tabulate import tabulate
+import time
+import calendar
 
 # inicializando a lista de pontos da imagem para serem recortados e booleano de controle para verificar se está realizando corte ou não
 cropping = False
@@ -52,18 +55,18 @@ def imageProcessing(image):
 def getNumberOfImage(image):
 	image = imageProcessing(image)
 
-	custom_config = r'--oem 3 --psm 7 -c tessedit_char_whitelist=0123456789'
-	result = pytesseract.image_to_string(image, config=custom_config)
-	print('7:',result, end='')
-	custom_config = r'--oem 3 --psm 8 -c tessedit_char_whitelist=0123456789'
-	result = pytesseract.image_to_string(image, config=custom_config)
-	print('8:',result, end='')
+	# custom_config = r'--oem 3 --psm 7 -c tessedit_char_whitelist=0123456789'
+	# result = pytesseract.image_to_string(image, config=custom_config)
+	# print('7:',result, end='')
+	# custom_config = r'--oem 3 --psm 8 -c tessedit_char_whitelist=0123456789'
+	# result = pytesseract.image_to_string(image, config=custom_config)
+	# print('8:',result, end='')
 	custom_config = r'--oem 3 --psm 13 -c tessedit_char_whitelist=0123456789'
 	result = pytesseract.image_to_string(image, config=custom_config)
-	print('13:',result, end='')
+	# print('13:',result, end='')
 
 	numbers = re.findall(r'\d+', result)
-	return int(numbers[0]) if numbers else None
+	return numbers[0] if numbers else '-'
 
 # Função que realiza a leitura dos frames do video
 def readFrames(videoPath):
@@ -142,16 +145,32 @@ if frames:
 	frame = frames[0]
 	getAreas(frame)
 
+# fecha todas as janelas abertas
+cv2.destroyAllWindows()
+
 values = {prop: [] for prop in properties}
+
+headers = ["TIMESTAMP"]
+for prop in properties:
+	headers.append(prop)
+
+formatRow = "{:>12}" * (len(headers))
+print(formatRow.format(*headers))
 
 # percorre loop dos frames selecionados e realiza o processamento para cada frame
 for frame in frames:
+	gmt = time.gmtime()
+	ts = calendar.timegm(gmt)
+
+	aux = []
+	aux.append(ts)
+
 	for ii, crop in enumerate(imageCrops):
 		if len(crop) == 2:
 			roi = frame[crop[0][1]:crop[1][1], crop[0][0]:crop[1][0]]
-			values[properties[ii]].append(getNumberOfImage(roi))
+			number = getNumberOfImage(roi)
 
-print(values)
-
-# close all open windows
-cv2.destroyAllWindows()
+			values[properties[ii]].append(number)
+			aux.append(number)
+	
+	print(formatRow.format(*aux))
