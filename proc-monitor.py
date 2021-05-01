@@ -7,6 +7,7 @@ import math
 from tabulate import tabulate
 import time
 import calendar
+import imutils
 
 # inicializando a lista de pontos da imagem para serem recortados e booleano de controle para verificar se está realizando corte ou não
 cropping = False
@@ -39,31 +40,21 @@ def clickAndCrop(event, x, y, flags, param):
 
 # Função que realiza o tratamento da imagem
 def imageProcessing(image):
-	r = 150.0 / image.shape[1]
-	dim = (150, int(image.shape[0] * r))
-	resized = cv2.resize(image, dim, interpolation = cv2.INTER_AREA)
-
+	resized = imutils.resize(image, width=150)
 	gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
 	rn = cv2.medianBlur(gray,5)
 	canny = cv2.Canny(rn, 100, 200)
 	ref = cv2.threshold(canny, 10, 255, cv2.THRESH_BINARY_INV)[1]
 	thresh = cv2.threshold(ref, 180, 255, cv2.THRESH_BINARY)[1]
-
+	
 	return thresh
 
 # Função que realiza a leitura do dígito na passada por parâmetro utilizando o tesseract
 def getNumberOfImage(image):
 	image = imageProcessing(image)
 
-	# custom_config = r'--oem 3 --psm 7 -c tessedit_char_whitelist=0123456789'
-	# result = pytesseract.image_to_string(image, config=custom_config)
-	# print('7:',result, end='')
-	# custom_config = r'--oem 3 --psm 8 -c tessedit_char_whitelist=0123456789'
-	# result = pytesseract.image_to_string(image, config=custom_config)
-	# print('8:',result, end='')
-	custom_config = r'--oem 3 --psm 13 -c tessedit_char_whitelist=0123456789'
+	custom_config = r'--oem 3 --psm 13'
 	result = pytesseract.image_to_string(image, config=custom_config)
-	# print('13:',result, end='')
 
 	numbers = re.findall(r'\d+', result)
 	return numbers[0] if numbers else '-'
@@ -84,7 +75,8 @@ def readFrames(videoPath):
 		if (ret != True):
 			break
 		if (frameId % math.floor(frameRate) == 0):
-			frames.append(frame)
+			resized = imutils.resize(frame, width=1440)
+			frames.append(resized)
 	
 	cap.release()
 
@@ -143,7 +135,7 @@ frames = readFrames(videoPath)
 
 if frames:
 	frame = frames[0]
-	getAreas(frame)
+	getAreas(frame.copy())
 
 # fecha todas as janelas abertas
 cv2.destroyAllWindows()
@@ -172,5 +164,13 @@ for frame in frames:
 
 			values[properties[ii]].append(number)
 			aux.append(number)
+
+			cv2.rectangle(frame, crop[0], crop[1], (0, 255, 0), 2)
+			cv2.putText(frame, number, (crop[0][0], crop[0][1] - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 255, 0), 2)
+			cv2.imshow('frame', frame)
+			cv2.waitKey(0)
 	
 	print(formatRow.format(*aux))
+
+# fecha todas as janelas abertas
+cv2.destroyAllWindows()
