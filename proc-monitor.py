@@ -13,6 +13,7 @@ import imutils
 cropping = False
 imageCrops = []
 refPt = []
+numFrames = 100
 
 # Função que define as funções do mouse para que seja possivel selecionar as areas
 def clickAndCrop(event, x, y, flags, param):
@@ -66,7 +67,7 @@ def readFrames(videoPath):
 	frameRate = cap.get(5)
 
 	while(cap.isOpened()):
-		if len(frames) == 10:
+		if len(frames) == numFrames:
 			break
 
 		frameId = cap.get(1) # frame atual
@@ -77,7 +78,7 @@ def readFrames(videoPath):
 		if (frameId % math.floor(frameRate) == 0):
 			resized = imutils.resize(frame, width=1440)
 			frames.append(resized)
-	
+
 	cap.release()
 
 	return frames
@@ -97,7 +98,7 @@ def getAreas(image):
 
 			# mostra a imagem e aguarda pela ação do usuário
 			cv2.imshow("image", image)
-			cv2.putText(image, "1- Selecione a area do " + prop, (15, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 255, 0), 2)
+			cv2.putText(image, "Selecione a area da propriedade", (15, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 255, 0), 2)
 		else:
 			cv2.setMouseCallback("image", clickAndCrop, [False])
 
@@ -127,14 +128,17 @@ properties = [prop.upper() for prop in args["properties"]]
 # carrega path do vídeo
 videoPath = args["video"]
 
-# mostra o vídeo
-print(videoPath)
+print("--> Informações recebidas")
+print("Video:", videoPath)
+print("Propriedades:", properties)
 
 # carrega os frames do vídeo
+print("\n--> Lendo frames do vídeo...")
 frames = readFrames(videoPath)
 
 if frames:
 	frame = frames[0]
+	print("\n--> Recebendo as áreas das propriedades...")
 	getAreas(frame.copy())
 
 # fecha todas as janelas abertas
@@ -147,6 +151,7 @@ for prop in properties:
 	headers.append(prop)
 
 formatRow = "{:>12}" * (len(headers))
+print("\n--> Dados lidos")
 print(formatRow.format(*headers))
 
 # percorre loop dos frames selecionados e realiza o processamento para cada frame
@@ -168,7 +173,9 @@ for frame in frames:
 			cv2.rectangle(frame, crop[0], crop[1], (0, 255, 0), 2)
 			cv2.putText(frame, number, (crop[0][0], crop[0][1] - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 255, 0), 2)
 			cv2.imshow('frame', frame)
-			cv2.waitKey(0)
+
+			if cv2.waitKey(1) & 0xFF == ord('q'):
+				break
 	
 	print(formatRow.format(*aux))
 
